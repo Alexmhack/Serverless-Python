@@ -215,3 +215,63 @@ For e.g.
 	```
 	docker run --env-file .env -p 8000:8000 -it serverless-python
 	```
+
+## Deploy Cloud Run
+
+Now we will be deploying our simple FastAPI app onto GCP Cloud Run using the gcloud CLI. For this we will simply add the `gcloud run deploy` command to our *Makefile*.
+
+So Cloud Run allows us to create Services or Jobs. In our case we need to create a service since we have a API application.
+When creating a service, for now we will be taking up the Container image for this service for one revision deploy at a time and that is possible using two ways,
+
+1. GCP Artifacts Registry
+2. GCP Container Registry
+
+Artifacts Registry is basically us giving GCP a repository version to store and use in other GCP services which in our case is the Cloud Run.
+
+We will divide this step into two Parts.
+
+1. Repository Creation
+2. Repository Pushing
+
+### Artifacts Registry Repo Creation
+
+```
+gcloud auth configure-docker us-central1-docker.pkg.dev
+gcloud artifacts repository create serverless-python-repo --repository-format=docker
+```
+
+Breaking down the above commands,
+
+1. `gcloud auth` provides us with the command `configure-docker` to "Register gcloud as a Docker credential helper"
+
+2. `gcloud artifacts repository` is the actual Artifacts Registry API command that let's us create the repository in the Artifacts Registry specifying it's name and the format
+
+For pushing a Docker image to the Registry, first we will be building our Docker Image each time before pushing so as to push the latest image every time.
+
+`docker build -f Dockerfile -t serverless-python . --compress`
+
+### Artifacts Registry Repo Push
+
+Pushing a Repository to Artifacts Registry is very easy and is same as pushing an Image to the Docker Hub or a branch to GitHub Repository.
+
+For pushing a Docker image to the Registry, first we will be building our Docker Image each time before pushing so as to push the latest image every time.
+
+`docker build -f Dockerfile -t serverless-python . --compress`
+
+Now creating a tag for this repository so that we can use it in the Cloud Run container URL selection.
+
+`docker tag serverless-python us-central1-docker.pkg.dev/weather-friend-xxx/serverless-python-repo/serverless-python:latest`
+
+And finally the repo push using,
+
+`docker push us-central1-docker.pkg.dev/weather-friend-xxx/serverless-python-repo/serverless-python --all-tags`
+
+Now we have created the Repository which our Cloud Run Service will be using, let's deploy our Cloud Run first using GCP Console and then using the `gcloud` SDK
+
+```
+gcloud run deploy serverless-python-run \
+	--image=us-central1-docker.pkg.dev/weather-friend-xxx/serverless-python-repo/serverless-python:latest \
+	--region=us-central1 --allow-unauthenticated --project=weather-friend-xxx
+```
+
+Here we are using the region as **us-central1** but based upon your location you should be selecting this region as that can be more useful with latency and managing the resources.
