@@ -1,0 +1,10 @@
+## Which python version
+FROM python:3.8-slim
+
+## Code
+COPY . /app/
+# COPY ./requirements.txt /app/requirements.txt
+
+WORKDIR /app/
+
+CMD ["python", "-m", "http.server"]
